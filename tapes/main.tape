@@ -17,8 +17,6 @@ task GetTaggingLMData
     python $repo/scripts/preprocess.py  $tagginglm_dir/dev > $dev_preprocessed
     python $repo/scripts/preprocess.py  $tagginglm_dir/test > $test_preprocessed
 
-
-
  }
 
 func BuildKenLM
@@ -50,6 +48,33 @@ task BuildKenLMMultiDomain calls BuildKenLM
     < repo=@
     > model
     :: ngram=@
+
+function KenLMScore
+    < kenlm_model
+    < input
+    < repo
+    > kenlm_scores
+    > quantiles
+    :: is_kenlm_train
+    {
+    python $repo/scripts/kenlm_score.py $kenlm_model $input > kenlm_scores
+
+    #create quantiles
+    if [ "$is_kenlm_train" = "true" ]; then
+        python $repo/scripts/quartiles.py --scores_file scores --n_quantiles 4 --action get_quantiles --quantiles_file quantiles > $quantiles
+    #assign quantiles
+    else
+        python $repo/scripts/quartiles.py --scores_file scores --n_quantiles 4 --action assign_quantiles --quantiles_file quantiles > $quantiles
+    fi
+
+    }
+
+task ScoreTrainKenlm calls  KenLMScore
+    < kenlm_model
+    < input
+    < repo
+    > kenlm_scores
+
 
 
 

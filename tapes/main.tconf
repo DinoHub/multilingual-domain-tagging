@@ -5,6 +5,8 @@ global {
     tagginglm_dir="../tagginglm_data"
     in_domain_name="flores_dev.luo"
     multi_domain_name="wmt_train.luo"
+    ngram=3
+    kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
 
 }
 

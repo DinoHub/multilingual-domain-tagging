@@ -2,10 +2,16 @@ import numpy as np
 import argparse
 
 
+def get_scores(scores_indomain, scores_multidomain):
+    scores = []
+    for i in range(len(scores_indomain)):
+        scores.append(scores_indomain[i] - scores_multidomain[i])  # difference between the length normalized scores
+    return scores
+
+
 def get_quantiles(scores, n_quantiles, quantiles_file):
     # Order the data from smallest to largest
     # Count how many observations you have in your data set
-    p = len(scores)
     unit_quant = 1 / n_quantiles
     out_f = open(quantiles_file, "w")
     for i in range(1, n_quantiles):
@@ -41,7 +47,8 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scores_file", type=str)
+    parser.add_argument("--scores_indomain", type=str)
+    parser.add_argument("--scores_multidomain", type=str)
     parser.add_argument("--n_quantiles", type=int)
     parser.add_argument("--quantiles_file", type=str)
     parser.add_argument("--action", type=str, choices=["get_quantiles", "assign_quantiles"], default="get_quantiles")
@@ -50,7 +57,10 @@ def main():
 
     args = parser.parse_args()
 
-    scores = [float(line.strip()) for line in open(args.scores_file, "r").readlines()]
+    scores_indomain = [float(line.strip()) for line in open(args.scores_indomain, "r").readlines()]
+    scores_multidomain = [float(line.strip()) for line in open(args.scores_multidomain, "r").readlines()]
+    scores = get_scores(scores_indomain, scores_multidomain)
+
     if args.action == "get_quantiles":
         get_quantiles(scores, args.n_quantiles, args.quantiles_file)
     elif args.action == "assign_quantiles":

@@ -1,0 +1,12 @@
+global {
+
+    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag"
+    repo=/projects/tir6/general/aogayo/models/domaintag    
+    tagginglm_dir="../tagginglm_data"
+    in_domain_name="flores_dev.luo"
+    multi_domain_name="wmt_train.luo"
+
+}
+
+
+

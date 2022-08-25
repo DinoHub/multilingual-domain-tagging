@@ -49,31 +49,38 @@ task BuildKenLMMultiDomain calls BuildKenLM
     > model
     :: ngram=@
 
-function KenLMScore
+func KenLMScore
     < kenlm_model
     < input
     < repo
     > kenlm_scores
     > quantiles
     :: is_kenlm_train
+    :: source_file
+    :: tagged_file
     {
-    python $repo/scripts/kenlm_score.py $kenlm_model $input > kenlm_scores
+    python $repo/scripts/kenlm_score.py $kenlm_model $input > $kenlm_scores
 
     #create quantiles
     if [ "$is_kenlm_train" = "true" ]; then
-        python $repo/scripts/quartiles.py --scores_file scores --n_quantiles 4 --action get_quantiles --quantiles_file quantiles > $quantiles
+        python $repo/scripts/quartiles.py --scores_file $kenlm_scores --n_quantiles 4 --action get_quantiles --quantiles_file $quantiles
     #assign quantiles
     else
-        python $repo/scripts/quartiles.py --scores_file scores --n_quantiles 4 --action assign_quantiles --quantiles_file quantiles > $quantiles
+        python $repo/scripts/quartiles.py --scores_file $kenlm_scores --n_quantiles 4 --action assign_quantiles \
+         --quantiles_file $quantiles  --source_file $source_file   --tagged_file $tagged_file > tags
     fi
 
     }
 
 task ScoreTrainKenlm calls  KenLMScore
-    < kenlm_model
-    < input
-    < repo
+    < kenlm_model=$model@BuildKenLMInDomain
+    < input=$in_domain_preprocessed@GetTaggingLMData
+    < repo=@
     > kenlm_scores
+    > quantiles
+    :: is_kenlm_train=true
+    :: source_file=None
+    :: tagged_file=None
 
 
 

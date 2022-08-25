@@ -13,18 +13,30 @@ def get_quantiles(scores, n_quantiles, quantiles_file):
         out_f.write(str(thresh) + "," + str(i) + "th\n")
 
 
-def assign_quantiles(scores, quant_dict, quant_list, out_file=None):
+def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_file=None):
+    if source_file and tagged_file:
+        '''
+        You get the source file with - goal is to add the tag at the beginning
+        Example : 
+        input: This is the first line
+        output: <1st> This is the first line
+        '''
+        source_lines = open(source_file, "r").readlines()
+        tagged_out = open(tagged_file, "w")
     quants = []
-    for score in scores:
-        for i in range(len(quant_list)):
-            if i == 0:
-                if score < quant_list[i]:
-                    quants.append("0th")
-            if score >= quant_list[i]:
-                quants.append(quant_dict[quant_list[i]])
+    for i in range(len(scores)):
+        for j in range(len(quant_list)):
+            if j == 0:
+                if scores[i] < quant_list[j]:
+                    quants.append("<0th>")
+            if scores[i] >= quant_list[j]:
+                quants.append(quant_dict[quant_list[j]])
 
-    for quant_tag in quants:
-        print(quant_tag)
+            # Printing out
+            print(quants[i])
+            if tagged_out:
+                source_lines[i] = quants[i] + " " + source_lines[i]
+                tagged_out.write(source_lines[i])
 
 
 def main():
@@ -33,6 +45,8 @@ def main():
     parser.add_argument("--n_quantiles", type=int)
     parser.add_argument("--quantiles_file", type=str)
     parser.add_argument("--action", type=str, choices=["get_quantiles", "assign_quantiles"], default="get_quantiles")
+    parser.add_argument("--source_file", type=str, default=None)
+    parser.add_argument("--tagged_file", type=str, default=None)
 
     args = parser.parse_args()
 
@@ -49,7 +63,7 @@ def main():
             split = line.split(",")
             quant_dict[float(split[0])] = split[1]
             quant_list.append(float(split[0]))
-        assign_quantiles(scores, quant_dict, quant_list)
+        assign_quantiles(scores, quant_dict, quant_list, source_file=args.source_file, tagged_file=args.tagged_file)
 
 
 if __name__ == "__main__":

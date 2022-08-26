@@ -73,13 +73,15 @@ func KenLMScore
     if [ "$is_kenlm_train" = "true" ]; then
         python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
         --n_quantiles 4 --action get_quantiles > $quantiles
-    #assign quantiles
-    else
-        python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
-         --n_quantiles 4 --action assign_quantiles --quantiles_file $in_quantiles  --source_file $tagginglm_dir/$source_file  --tagged_file $tagged_file > tags
-         cat $in_quantiles > $quantiles
-    fi
+        quantiles_file=$quantiles
 
+    else
+        quantiles_file=$in_quantiles
+    fi
+    #assign quantiles
+    python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
+     --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file  --source_file $tagginglm_dir/$source_file  --tagged_file $tagged_file > tags
+    cat $quantiles_file > $quantiles
     }
 
 task CalculateQuantiles calls  KenLMScore
@@ -93,15 +95,14 @@ task CalculateQuantiles calls  KenLMScore
     > multidomain_kenlm_scores
     > quantiles
     :: is_kenlm_train=true
-    :: source_file=None
-    :: tagged_file=None
+    :: source_file=tagginglm_test
+    :: tagged_file=tagginglm_test_tagged
 
 
-
-task AssignQuantiles calls  KenLMScore
+task AssignQuantilesTest calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$tagginglm_test_preprocessed@GetTaggingLMData
+    < input=$test_preprocessed@GetTaggingLMData
     < repo=@
     < tagginglm_dir=@
     < in_quantiles=$quantiles@CalculateQuantiles
@@ -112,6 +113,35 @@ task AssignQuantiles calls  KenLMScore
     :: source_file=test
     :: tagged_file=test_tagged
 
+
+task AssignQuantilesDev calls  KenLMScore
+    < kenlm_model_indomain=$model@BuildKenLMInDomain
+    < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
+    < input=$dev_preprocessed@GetTaggingLMData
+    < repo=@
+    < tagginglm_dir=@
+    < in_quantiles=$quantiles@CalculateQuantiles
+    > indomain_kenlm_scores
+    > multidomain_kenlm_scores
+    > quantiles
+    :: is_kenlm_train=false
+    :: source_file=dev
+    :: tagged_file=dev_tagged
+
+
+task AssignQuantilesTrain calls  KenLMScore
+    < kenlm_model_indomain=$model@BuildKenLMInDomain
+    < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
+    < input=$train_preprocessed@GetTaggingLMData
+    < repo=@
+    < tagginglm_dir=@
+    < in_quantiles=$quantiles@CalculateQuantiles
+    > indomain_kenlm_scores
+    > multidomain_kenlm_scores
+    > quantiles
+    :: is_kenlm_train=false
+    :: source_file=train
+    :: tagged_file=train_tagged
 
 
 

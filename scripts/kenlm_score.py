@@ -7,7 +7,10 @@ model = kenlm.LanguageModel(model_name)
 scores=[]
 lines = [line.strip().lower() for line in open(test_name, "r").readlines()]
 for line in lines:
-	print(model.score(line)/len(line))
+	try:
+		print(model.score(line)/len(line.split(" ")))
+	except:
+		print(f"Possible division by zero: {line}")
 """
 normalized by length - The reason that we need to normalize for length is that
 the value of log(P(s|I)) − log(P(s|N)) tends to

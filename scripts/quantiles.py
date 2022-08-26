@@ -14,7 +14,7 @@ def get_quantiles(scores, n_quantiles, quantiles_file):
     # out_f = open(quantiles_file, "w")
     for i in range(1, n_quantiles):
         thresh = np.quantile(scores, unit_quant * i)
-        print(str(thresh) + "," + str(i) + "<th>")
+        print(str(thresh) + ",<" + str(i) + "th>")
 
 
 def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_file=None):

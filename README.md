@@ -14,3 +14,6 @@ We use Ducttape to run experiments
 
 ### Ducttape Graph
 ![Ducttape graph](ducttape_graph.jpeg)
+
+
+### Running

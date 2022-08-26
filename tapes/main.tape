@@ -10,11 +10,14 @@ task GetTaggingLMData
     :: multi_domain_name=@
     :: tagging_test_name=@
     :: repo=@
+    :: multidomain_size=@
 
  {
+
+    python $repo/scripts/select_data.py   $tagginglm_dir/${multi_domain_name} $multidomain_size
     #will return preprocessed version of the data provided
     python $repo/scripts/preprocess.py  $tagginglm_dir/${in_domain_name} > $in_domain_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/${multi_domain_name} > $multi_domain_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/${multi_domain_name}.selected > $multi_domain_preprocessed
     python $repo/scripts/preprocess.py  $tagginglm_dir/${tagging_test_name} > $tagginglm_test_preprocessed
     python $repo/scripts/preprocess.py  $tagginglm_dir/train > $train_preprocessed
     python $repo/scripts/preprocess.py  $tagginglm_dir/dev > $dev_preprocessed
@@ -77,11 +80,12 @@ func KenLMScore
 
     else
         quantiles_file=$in_quantiles
+        cat $in_quantiles > $quantiles
     fi
+
     #assign quantiles
     python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
      --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file  --source_file $tagginglm_dir/$source_file  --tagged_file $tagged_file > tags
-    cat $quantiles_file > $quantiles
     }
 
 task CalculateQuantiles calls  KenLMScore

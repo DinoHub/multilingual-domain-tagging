@@ -9,6 +9,7 @@ global {
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
+    multidomain_size=5997
 
 }
 

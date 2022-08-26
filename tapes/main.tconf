@@ -2,12 +2,13 @@ global {
 
     ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag"
     repo=/projects/tir6/general/aogayo/models/domaintag    
-    tagginglm_dir="../tagginglm_data"
+    tagginglm_dir=/projects/tir6/general/aogayo/models/domaintag/tagginglm_data
     in_domain_name="flores_dev.luo"
     multi_domain_name="wmt_train.luo"
     tagging_test_name="tagginglm_test"
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
+    in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
 
 }
 

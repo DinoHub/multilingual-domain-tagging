@@ -10,13 +10,11 @@ def get_scores(scores_indomain, scores_multidomain):
 
 
 def get_quantiles(scores, n_quantiles, quantiles_file):
-    # Order the data from smallest to largest
-    # Count how many observations you have in your data set
     unit_quant = 1 / n_quantiles
-    out_f = open(quantiles_file, "w")
+    # out_f = open(quantiles_file, "w")
     for i in range(1, n_quantiles):
         thresh = np.quantile(scores, unit_quant * i)
-        out_f.write(str(thresh) + "," + str(i) + "th\n")
+        print(str(thresh) + "," + str(i) + "<th>")
 
 
 def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_file=None):
@@ -28,21 +26,24 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
         output: <1st> This is the first line
         '''
         source_lines = open(source_file, "r").readlines()
+        assert len(source_lines) == len(scores)
+        print(f"LEEEENN {len(source_lines)}")
         tagged_out = open(tagged_file, "w")
     quants = []
     for i in range(len(scores)):
         for j in range(len(quant_list)):
-            if j == 0:
-                if scores[i] < quant_list[j]:
+            if scores[i] <= quant_list [j]:
+                if j==0:  #1st
                     quants.append("<0th>")
-            if scores[i] >= quant_list[j]:
-                quants.append(quant_dict[quant_list[j]])
+                else:
+                    quants.append(quant_dict[quant_list[j-1]])
+                break
+            quants.append(quant_dict[quant_list[j - 1]])
 
             # Printing out
-            print(quants[i])
-            if tagged_out:
-                source_lines[i] = quants[i] + " " + source_lines[i]
-                tagged_out.write(source_lines[i])
+        print(quants[i])
+        if tagged_out:
+            tagged_out.write(quants[i] + " " + source_lines[i])
 
 
 def main():

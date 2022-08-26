@@ -57,6 +57,8 @@ func KenLMScore
     < kenlm_model_multidomain
     < input
     < repo
+    < tagginglm_dir
+    < in_quantiles
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
@@ -70,20 +72,23 @@ func KenLMScore
     #create quantiles
     if [ "$is_kenlm_train" = "true" ]; then
         python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
-        --n_quantiles 4 --action get_quantiles --quantiles_file $quantiles
+        --n_quantiles 4 --action get_quantiles > $quantiles
     #assign quantiles
     else
-        python $repo/scripts/quantiles.py --scores_file $kenlm_scores --n_quantiles 4 --action assign_quantiles \
-         --quantiles_file $quantiles  --source_file $source_file   --tagged_file $tagged_file > tags
+        python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
+         --n_quantiles 4 --action assign_quantiles --quantiles_file $in_quantiles  --source_file $tagginglm_dir/$source_file  --tagged_file $tagged_file > tags
+         cat $in_quantiles > $quantiles
     fi
 
     }
 
-task ScoreTrainKenlm calls  KenLMScore
+task CalculateQuantiles calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
     < input=$tagginglm_test_preprocessed@GetTaggingLMData
     < repo=@
+    < tagginglm_dir=@
+    < in_quantiles=@
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
@@ -93,6 +98,19 @@ task ScoreTrainKenlm calls  KenLMScore
 
 
 
+task AssignQuantiles calls  KenLMScore
+    < kenlm_model_indomain=$model@BuildKenLMInDomain
+    < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
+    < input=$tagginglm_test_preprocessed@GetTaggingLMData
+    < repo=@
+    < tagginglm_dir=@
+    < in_quantiles=$quantiles@CalculateQuantiles
+    > indomain_kenlm_scores
+    > multidomain_kenlm_scores
+    > quantiles
+    :: is_kenlm_train=false
+    :: source_file=test
+    :: tagged_file=test_tagged
 
 
 

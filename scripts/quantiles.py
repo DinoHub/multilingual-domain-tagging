@@ -27,7 +27,6 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
         '''
         source_lines = open(source_file, "r").readlines()
         assert len(source_lines) == len(scores)
-        print(f"LEEEENN {len(source_lines)}")
         tagged_out = open(tagged_file, "w")
     quants = []
     for i in range(len(scores)):

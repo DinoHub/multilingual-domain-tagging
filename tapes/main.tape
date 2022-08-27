@@ -1,41 +1,62 @@
-task GetTaggingLMData
-    < tagginglm_dir=@
+task GetData
+    < data_dir=@
+    > tagginglm_dir
+    :: tagging_lang=@
+ {
+    # Build a tagggingLM dir and put all the data there
+    mkdir -p $tagginglm_dir
+
+    for file in $data_dir/*.$tagging_lang; do
+    [ -f "$file" ] || break
+     cp $file $tagginglm_dir/
+    done
+
+ }
+
+task PreprocessTaggingLMData
+    < tagginglm_dir=$tagginglm_dir@GetData
     > in_domain_preprocessed
     > multi_domain_preprocessed
     > tagginglm_test_preprocessed
     > train_preprocessed
-    > dev_preprocessed
+    > valid_preprocessed
     > test_preprocessed
     :: in_domain_name=@
     :: multi_domain_name=@
     :: tagging_test_name=@
+    :: tagging_lang=@
     :: repo=@
-    :: multidomain_size=@
-
  {
 
-    python $repo/scripts/select_data.py   $tagginglm_dir/${multi_domain_name} $multidomain_size
-    #will return preprocessed version of the data provided
-    python $repo/scripts/preprocess.py  $tagginglm_dir/${in_domain_name} > $in_domain_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/${multi_domain_name}.selected > $multi_domain_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/${tagging_test_name} > $tagginglm_test_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/train > $train_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/dev > $dev_preprocessed
-    python $repo/scripts/preprocess.py  $tagginglm_dir/test > $test_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/${in_domain_name}.${tagging_lang} > $in_domain_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/${multi_domain_name}.${tagging_lang}> $multi_domain_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/${tagging_test_name}.${tagging_lang} > $tagginglm_test_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/train.${tagging_lang} > $train_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/valid.${tagging_lang} > $valid_preprocessed
+    python $repo/scripts/preprocess.py  $tagginglm_dir/test.${tagging_lang} > $test_preprocessed
 
  }
 
 func BuildKenLM
     < kenlm_dir
     < kenlm_train_data
-    < test_input
     < repo
     > model
     :: ngram
-
+    :: train_size
 
 {
-   $kenlm_dir/bin/lmplz -o $ngram < $kenlm_train_data > $kenlm_train_data.arpa
+    file_size=`wc -l $kenlm_train_data`
+    size=$(echo $file_size | cut -d " " -f 1)
+
+   if  [ $train_size != size]; then
+      python $repo/scripts/select_data.py   $kenlm_train_data $train_size      #will return preprocessed version of the data provided
+      $kenlm_dir/bin/lmplz -o $ngram < $kenlm_train_data.selected > $kenlm_train_data.arpa
+
+   else
+      $kenlm_dir/bin/lmplz -o $ngram < $kenlm_train_data > $kenlm_train_data.arpa
+
+   fi
    $kenlm_dir/bin/build_binary $kenlm_train_data.arpa  $model
 
  }
@@ -43,17 +64,21 @@ func BuildKenLM
 
 task BuildKenLMInDomain calls BuildKenLM
     < kenlm_dir=@
-    < kenlm_train_data=$in_domain_preprocessed@GetTaggingLMData
+    < kenlm_train_data=$in_domain_preprocessed@PreprocessTaggingLMData
     < repo=@
     > model
     :: ngram=@
+    :: train_size=$indomain_size
+
 
 task BuildKenLMMultiDomain calls BuildKenLM
     < kenlm_dir=@
-    < kenlm_train_data=$multi_domain_preprocessed@GetTaggingLMData
+    < kenlm_train_data=$multi_domain_preprocessed@PreprocessTaggingLMData
     < repo=@
     > model
     :: ngram=@
+    :: train_size=$multidomain_size
+
 
 func KenLMScore
     < kenlm_model_indomain
@@ -65,15 +90,16 @@ func KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_kenlm_train
+    :: is_calc_quants
     :: source_file
     :: tagged_file
+    :: tagging_lang
     {
     python $repo/scripts/kenlm_score.py $kenlm_model_indomain $input > $indomain_kenlm_scores
     python $repo/scripts/kenlm_score.py $kenlm_model_multidomain $input > $multidomain_kenlm_scores
 
     #create quantiles
-    if [ "$is_kenlm_train" = "true" ]; then
+    if [ "$is_calc_quants" = "true" ]; then
         python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
         --n_quantiles 4 --action get_quantiles > $quantiles
         quantiles_file=$quantiles
@@ -85,67 +111,83 @@ func KenLMScore
 
     #assign quantiles
     python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
-     --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file  --source_file $tagginglm_dir/$source_file  --tagged_file $tagged_file > tags
+     --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file  --source_file $tagginglm_dir/$source_file.$tagging_lang  --tagged_file $tagged_file > tags
     }
 
 task CalculateQuantiles calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$tagginglm_test_preprocessed@GetTaggingLMData
+    < input=$tagginglm_test_preprocessed@PreprocessTaggingLMData
     < repo=@
-    < tagginglm_dir=@
+    < tagginglm_dir=$tagginglm_dir@GetData
     < in_quantiles=@
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_kenlm_train=true
+    :: is_calc_quants=true
     :: source_file=tagginglm_test
     :: tagged_file=tagginglm_test_tagged
+    :: tagging_lang=@
 
 
 task AssignQuantilesTest calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$test_preprocessed@GetTaggingLMData
+    < input=$test_preprocessed@PreprocessTaggingLMData
     < repo=@
-    < tagginglm_dir=@
+    < tagginglm_dir=$tagginglm_dir@GetData
     < in_quantiles=$quantiles@CalculateQuantiles
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_kenlm_train=false
+    :: is_calc_quants=false
     :: source_file=test
     :: tagged_file=test_tagged
+    :: tagging_lang=@
 
 
-task AssignQuantilesDev calls  KenLMScore
+
+task AssignQuantilesValid calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$dev_preprocessed@GetTaggingLMData
+    < input=$valid_preprocessed@PreprocessTaggingLMData
     < repo=@
-    < tagginglm_dir=@
+    < tagginglm_dir=$tagginglm_dir@GetData
     < in_quantiles=$quantiles@CalculateQuantiles
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_kenlm_train=false
-    :: source_file=dev
-    :: tagged_file=dev_tagged
+    :: is_calc_quants=false
+    :: source_file=valid
+    :: tagged_file=valid_tagged
+    :: tagging_lang=@
+
 
 
 task AssignQuantilesTrain calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$train_preprocessed@GetTaggingLMData
+    < input=$train_preprocessed@PreprocessTaggingLMData
     < repo=@
-    < tagginglm_dir=@
+    < tagginglm_dir=$tagginglm_dir@GetData
     < in_quantiles=$quantiles@CalculateQuantiles
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_kenlm_train=false
+    :: is_calc_quants=false
     :: source_file=train
     :: tagged_file=train_tagged
+    :: tagging_lang=@
+
+
+
+
+
+
+
+
+
+
 
 
 

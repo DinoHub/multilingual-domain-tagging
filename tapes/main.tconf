@@ -1,15 +1,18 @@
 global {
 
-    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag"
-    repo=/projects/tir6/general/aogayo/models/domaintag    
-    tagginglm_dir=/projects/tir6/general/aogayo/models/domaintag/tagginglm_data
+    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag-test"
+    repo=/projects/tir6/general/aogayo/models/domaintag
+    data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
     in_domain_name="indomain"
     multi_domain_name="multidomain"
     tagging_test_name="tagginglm_test"
+    tagging_lang=luo
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
     multidomain_size=5997
+    indomain_size=997
+
 
 }
 

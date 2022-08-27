@@ -7,10 +7,13 @@ Based on:
 ## Setup
 
 We use Ducttape to run experiments
+We use Fairseq libary for MT training
 
 - Install [KenLM](https://github.com/kmario23/KenLM-training) and its dependencies
 - Install packages in [requirements.txt](/requirements.txt)
 - 
+### Tokenization
+We assume you already have a trained spm model for tokenization that is to be used for all runs.
 
 ### Ducttape Graph
 ![Ducttape graph](ducttape_graph.jpeg)

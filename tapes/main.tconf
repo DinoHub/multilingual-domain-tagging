@@ -7,6 +7,9 @@ global {
     multi_domain_name="multidomain"
     tagging_test_name="tagginglm_test"
     tagging_lang=luo
+    src_lang=en
+    tgt_lang=luo
+    spm_model=/projects/tir6/general/aogayo/models/domaintag/spm/spm.model
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles

@@ -1,8 +1,21 @@
 task GetData
     < data_dir=@
     > tagginglm_dir
-    :: tagging_lang=@
+    > untagged_train
+    > untagged_test
+    > untagged_valid
+    :: tagging_lang=@ src_lang=@ tgt_lang=@
+
  {
+    if [ $tagging_lang = $src_lang ]; then
+       untagged_lang=$tgt_lang
+    elif [ $tagging_lang = $tgt_lang ]; then
+       untagged_lang=$src_lang
+    else
+        echo "check your languages"
+        exit 1
+    fi
+
     # Build a tagggingLM dir and put all the data there
     mkdir -p $tagginglm_dir
 
@@ -10,6 +23,14 @@ task GetData
     [ -f "$file" ] || break
      cp $file $tagginglm_dir/
     done
+
+    ln -s $data_dir/train.${untagged_lang} $untagged_train
+    ln -s $data_dir/test.${untagged_lang} $untagged_test
+    ln -s $data_dir/valid.${untagged_lang} $untagged_valid
+
+
+
+
 
  }
 
@@ -67,8 +88,7 @@ task BuildKenLMInDomain calls BuildKenLM
     < kenlm_train_data=$in_domain_preprocessed@PreprocessTaggingLMData
     < repo=@
     > model
-    :: ngram=@
-    :: train_size=$indomain_size
+    :: ngram=@ train_size=$indomain_size
 
 
 task BuildKenLMMultiDomain calls BuildKenLM
@@ -76,8 +96,7 @@ task BuildKenLMMultiDomain calls BuildKenLM
     < kenlm_train_data=$multi_domain_preprocessed@PreprocessTaggingLMData
     < repo=@
     > model
-    :: ngram=@
-    :: train_size=$multidomain_size
+    :: ngram=@ train_size=$multidomain_size
 
 
 func KenLMScore
@@ -90,9 +109,9 @@ func KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
+    > tagged_file
     :: is_calc_quants
     :: source_file
-    :: tagged_file
     :: tagging_lang
     {
     python $repo/scripts/kenlm_score.py $kenlm_model_indomain $input > $indomain_kenlm_scores
@@ -124,10 +143,8 @@ task CalculateQuantiles calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_calc_quants=true
-    :: source_file=tagginglm_test
-    :: tagged_file=tagginglm_test_tagged
-    :: tagging_lang=@
+    > tagged_file=tagginglm_test_tagged
+    :: is_calc_quants=true source_file=tagginglm_test tagging_lang=@
 
 
 task AssignQuantilesTest calls  KenLMScore
@@ -140,10 +157,8 @@ task AssignQuantilesTest calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_calc_quants=false
-    :: source_file=test
-    :: tagged_file=test_tagged
-    :: tagging_lang=@
+    > tagged_file=test_tagged
+    :: is_calc_quants=false source_file=test tagging_lang=@
 
 
 
@@ -157,10 +172,8 @@ task AssignQuantilesValid calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_calc_quants=false
-    :: source_file=valid
-    :: tagged_file=valid_tagged
-    :: tagging_lang=@
+    > tagged_file=valid_tagged
+    :: is_calc_quants=false source_file=valid tagging_lang=@
 
 
 
@@ -174,14 +187,53 @@ task AssignQuantilesTrain calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    :: is_calc_quants=false
-    :: source_file=train
-    :: tagged_file=train_tagged
-    :: tagging_lang=@
+    > tagged_file=train_tagged
+    :: is_calc_quants=false source_file=train tagging_lang=@
 
 
+func ApplyBPE
+    < raw_untagged
+    < raw_tagged
+    < spm_model
+    > spm_tagged
+    > spm_untagged
+    :: repo
+    :: src_lang
+    :: tgt_lang
+{
+
+    python $repo/scripts/spm_encode.py --input_file $raw_untagged  --out_file spm_untagged \
+    --model_name=$spm_model
+    python $repo/scripts/spm_encode.py --input_file $raw_tagged --out_file spm_tagged \
+    --model_name=$spm_model
+
+}
+
+task ApplyBPETrain calls ApplyBPE
+    < raw_untagged=$untagged_train@GetData
+    < raw_tagged=$tagged_file@AssignQuantilesTrain
+    < spm_model=@
+    > spm_tagged
+    > spm_untagged
+    :: repo=@ src_lang=@ tgt_lang=@
 
 
+task ApplyBPEValid calls ApplyBPE
+    < raw_untagged=$untagged_valid@GetData
+    < raw_tagged=$tagged_file@AssignQuantilesValid
+    < spm_model=@
+    > spm_tagged
+    > spm_untagged
+    :: repo=@ src_lang=@ tgt_lang=@
+
+
+task ApplyBPETest calls ApplyBPE
+    < raw_untagged=$untagged_test@GetData
+    < raw_tagged=$tagged_file@AssignQuantilesTest
+    < spm_model=@
+    > spm_tagged
+    > spm_untagged
+    :: repo=@ src_lang=@ tgt_lang=@
 
 
 

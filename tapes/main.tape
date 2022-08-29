@@ -235,6 +235,51 @@ task ApplyBPETest calls ApplyBPE
     > spm_untagged
     :: repo=@ src_lang=@ tgt_lang=@
 
+task BinarizeData
+    < train_tagged=$spm_tagged@ApplyBPETrain
+    < train_untagged=$spm_untagged@ApplyBPETrain
+    < valid_tagged=$spm_tagged@ApplyBPEValid
+    < valid_untagged=$spm_untagged@ApplyBPEValid
+    < test_tagged=$spm_tagged@ApplyBPETest
+    < test_untagged=$spm_untagged@ApplyBPETest
+    < src_dict=@
+    < tgt_dict=@
+    > bin_dir
+    :: .submitter=@ .cpus=8 .mem=32000M
+    :: repo=@
+    :: src_lang=@
+    :: tgt_lang=@
+    :: tagging_lang=@
+    :: has_train=true
+{
+     if [ $tagging_lang = $src_lang ]; then
+       untagged_lang=$tgt_lang
+    elif [ $tagging_lang = $tgt_lang ]; then
+       untagged_lang=$src_lang
+    else
+        echo "check your languages"
+        exit 1
+    fi
+
+    # symlink for fairseq format
+    ln -s $train_tagged train.${tagging_lang}
+    ln -s $train_untagged train.${untagged_lang}
+    ln -s $valid_tagged valid.${tagging_lang}
+    ln -s $valid_untagged valid.${untagged_lang}
+    ln -s $test_tagged test.${tagging_lang}
+    ln -s $test_untagged test.${untagged_lang}
+
+    fairseq-preprocess \
+        --source-lang $src_lang --target-lang $tgt_lang \
+        $([ "$has_train" = true ] && echo "--trainpref train" || echo "") \
+        --validpref valid --testpref test \
+        --thresholdsrc 0 --thresholdtgt 0 \
+        --srcdict $tgt_dict --tgtdict $tgt_dict \
+        --workers 8 \
+        --destdir $bin_dir
+}
+
+
 
 
 

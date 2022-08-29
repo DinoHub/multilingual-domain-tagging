@@ -1,5 +1,8 @@
 global {
-
+    ducttape_experimental_imports=true
+    ducttape_experimental_submitters=true
+    submitter="slurm"
+    .exclude="tir-0-17,tir-1-13"
     ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag-test"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
@@ -10,12 +13,13 @@ global {
     src_lang=en
     tgt_lang=luo
     spm_model=/projects/tir6/general/aogayo/models/domaintag/spm/spm.model
+    src_dict=/projects/tir6/general/aogayo/models/domaintag/spm/dict.txt
+    tgt_dict=/projects/tir6/general/aogayo/models/domaintag/spm/dict.txt
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
     multidomain_size=5997
     indomain_size=997
-
 
 }
 

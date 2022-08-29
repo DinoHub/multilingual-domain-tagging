@@ -5,6 +5,7 @@ Based on:
 - [Tagged Back-Translation](https://arxiv.org/abs/1906.06442)
 
 ## Setup
+tir directory - `/projects/tir6/general/aogayo/models/domaintag`
 
 We use Ducttape to run experiments
 We use Fairseq libary for MT training

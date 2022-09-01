@@ -287,7 +287,7 @@ task TrainModel
     < bpe_model=$spm_model
     < pretrained_model=@
     > model_dir
-    :: .submitter=@ .mem=32000 .gres="gpu:2" .cpus=2
+    :: .submitter=@ .mem=32000 .gres="gpu:3" .cpus=2
     :: src_lang=@
     :: tgt_lang=@
     :: bpe_type=@
@@ -461,7 +461,7 @@ task ScoreTranslationsValid
 }
 
 summary TranslationQualityTest {
-  of ScoreTranslations >  bleu comet chrf ter bleurt {
+  of ScoreTranslationsTest >  bleu comet chrf ter bleurt {
     cat $test_score | grep -oP "COMET = \K[-0-9.]+" > $comet
     cat $test_score | grep -oP "BLEU = \K[-0-9.]+" > $bleu
     cat $test_score | grep -oP "chrF2 = \K[-0-9.]+" > $chrf

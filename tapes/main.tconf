@@ -3,13 +3,13 @@ global {
     ducttape_experimental_submitters=true
     submitter="slurm"
     .exclude="tir-0-17,tir-1-13"
-    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag-test"
+    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
     in_domain_name="indomain"
     multi_domain_name="multidomain"
     tagging_test_name="tagginglm_test"
-    tagging_lang=luo
+    tagging_lang=(TaggingLang: luo en)
     src_lang=en
     tgt_lang=luo
     spm_model=/projects/tir6/general/aogayo/models/domaintag/spm/spm.model
@@ -18,9 +18,8 @@ global {
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
-    multidomain_size=5997
+    multidomain_size=(MultidomainSize: 5997 10000)
     indomain_size=997
-
     bpe_type=sentencepiece
     use_labelsmooth=False
     seed=9
@@ -33,3 +32,6 @@ global {
     nbest=4
 }
 
+plan TaggingTarget {
+    reach ScoreTranslationsTest via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
+}

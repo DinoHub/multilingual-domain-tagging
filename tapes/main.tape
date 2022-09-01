@@ -280,12 +280,195 @@ task BinarizeData
 }
 
 
+task TrainModel
+    < bin_dir=@BinarizeData
+    < src_dict=@
+    < tgt_dict=@
+    < bpe_model=$spm_model
+    < pretrained_model=@
+    > model_dir
+    :: .submitter=@ .mem=32000 .gres="gpu:2" .cpus=2
+    :: src_lang=@
+    :: tgt_lang=@
+    :: bpe_type=@
+    :: repo=@
+    :: seed=@
+    :: use_labelsmooth=@
+{
+    # TODO: parameters are currently hard-coded
+    # later we should try to make variable while having a default
+    lr=5e-4
+    arch=transformer_iwslt_de_en
+    patience=10
+    max_epoch=100
+    max_tokens=4096
+    update_freq=1
+
+    fairseq-train \
+        $bin_dir \
+        --task translation_multi_simple_epoch  \
+        --finetune-from-model $pretrained_model \
+        --max-epoch $max_epoch \
+        --log-interval 10 \
+        --lang-pairs "en-luo" \
+        --arch $arch --share-all-embeddings \
+        --optimizer adam --adam-betas '(0.9, 0.98)' --clip-norm 1.0 \
+        --lr $lr --lr-scheduler inverse_sqrt  --warmup-updates 4000 \
+        --criterion $([ "$use_labelsmooth" = true ] && echo  "label_smoothed_cross_entropy --label-smoothing 0.1" || echo "cross_entropy") \
+        --dropout 0.3 --weight-decay 0.0001 \
+        --max-tokens ${max_tokens} --update-freq ${update_freq} \
+        --patience $patience \
+        --save-dir $model_dir \
+        --seed $seed \
+        --wandb-project luo_m2m
+
+    # copy necessary files for a complete checkpoint
+    if [ "$bpe_type" = "sentencepiece" ]; then
+        ln -s $bpe_model $model_dir/sentencepiece.bpe.model
+    elif [ "$bpe_type" = "fastbpe" ]; then
+        ln -s $bpe_model $model_dir/bpecodes
+    else
+        echo "unknown or not supported bpe type"
+        exit 1
+    fi
+    cp $src_dict  $model_dir/dict.${src_lang}.txt
+    cp $tgt_dict  $model_dir/dict.${tgt_lang}.txt
+    mv $model_dir/checkpoint_best.pt $model_dir/model.pt
+}
+
+func GenerateTranslations
+    < bin_dir
+    < model_dir
+    > scores
+    > predictions
+    :: split
+    :: repo
+    :: src_lang
+    :: tgt_lang
+    :: bpe_type
+    :: is_multilingual
+    :: batch_size
+    :: sampling
+    :: sampling_topp
+    :: diversity_rate
+    :: nbest
+{
+    multilingual_args=""
+    if [ "$is_multilingual" = true ]; then
+        multilingual_args+="--task translation_multi_simple_epoch "
+        multilingual_args+="--decoder-langtok --encoder-langtok src "
+        multilingual_args+="--lang-pairs $pretrained_model/language_pairs.txt "
+        multilingual_args+="--fixed-dictionary $pretrained_model/dict.txt "
+    fi
+
+    fairseq-generate \
+        $bin_dir \
+        --fp16 \
+        -s $src_lang -t $tgt_lang \
+        --gen-subset $split \
+        --batch-size $batch_size \
+        --path $model_dir/model.pt \
+        $multilingual_args \
+        --remove-bpe $([ "$bpe_type" = "sentencepiece" ] && echo "sentencepiece" || echo "") \
+        $([ "$bpe_type" = "fastbpe" ] && echo "--tokenizer moses" || echo "")  \
+        $([ "$sampling" = true ] && echo "--sampling" || echo "") \
+        $([ ! -z "$sampling_topp"  ] && echo "--sampling-topp $sampling_topp" || echo "") \
+        --diversity-rate $diversity_rate \
+        --beam $nbest \
+        --nbest $nbest \
+            > full_outputs
+
+        cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f2 > $scores
+        cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f3-  > full_predictions
+        awk "NR % 5 == 1" > $predictions
+}
+
+task GenerateTranslationsValid calls GenerateTranslations
+    < bin_dir=@BinarizeData
+    < model_dir=(
+        UsePretrained:
+            true=$pretrained_model
+            false=$model_dir@TrainModel
+        )
+    > scores
+    > predictions
+    :: .submitter=@ .gres="gpu:1" .cpus=5 .mem=32000M .time=0
+    :: split=valid
+    :: repo=@
+    :: src_lang=@
+    :: tgt_lang=@
+    :: bpe_type=@
+    :: is_multilingual=@
+    :: batch_size=@
+    :: sampling=@
+    :: sampling_topp=@
+    :: diversity_rate=@
+    :: nbest=@
 
 
+task GenerateTranslationsTest calls GenerateTranslations
+    < bin_dir=@BinarizeData
+    < model_dir=(
+        UsePretrained:
+            true=$pretrained_model
+            false=$model_dir@TrainModel
+        )
+    > scores
+    > predictions
+    :: .submitter=@ .gres="gpu:1" .cpus=5 .mem=32000M .time=0
+    :: split=test
+    :: repo=@
+    :: src_lang=@
+    :: tgt_lang=@
+    :: bpe_type=@
+    :: is_multilingual=@
+    :: batch_size=@
+    :: sampling=@
+    :: sampling_topp=@
+    :: diversity_rate=@
+    :: nbest=@
 
+task ScoreTranslationsTest
+    < data_dir=@
+    < predictions=@GenerateTranslationsTest
+    > test_score
+    :: .submitter=@ .mem=16000 .gres="gpu:1" .cpus=2
+    :: repo=@
+    :: src_lang=@
+    :: tgt_lang=@
+ {
+     test_src=@data_dir/test.{@src_lang}
+     test_tgt=@data_dir/test.{@tgt_lang}
+    python $repo/scripts/score.py \
+        $predictions $test_tgt --src $test_src > $score
 
+ }
 
+task ScoreTranslationsValid
+    < data_dir=@
+    < valid_predictions=$predictions@GenerateTranslationsValid
+    > valid_score
+    :: .submitter=@ .mem=16000 .gres="gpu:1" .cpus=2
+    :: repo=@
+    :: src_lang=@
+    :: tgt_lang=@
 
+{
+    valid_src=@data_dir/valid.{@src_lang}
+    valid_tgt=@data_dir/valid.{@tgt_lang}
+    python $repo/scripts/score.py \
+        $valid_predictions $valid_tgt --src $valid_src > $valid_score
+}
 
-
-
+summary TranslationQualityTest {
+  of ScoreTranslations >  bleu comet chrf ter bleurt {
+    cat $test_score | grep -oP "COMET = \K[-0-9.]+" > $comet
+    cat $test_score | grep -oP "BLEU = \K[-0-9.]+" > $bleu
+    cat $test_score | grep -oP "chrF2 = \K[-0-9.]+" > $chrf
+    cat $test_score | grep -oP "TER = \K[-0-9.]+" > $ter
+    cat $test_score | grep -oP "BLEURT = \K[-0-9.]+" > $bleurt || true
+    if [ ! -s $bleurt ]; then
+        echo "---" > $bleurt
+    fi
+   }
+}

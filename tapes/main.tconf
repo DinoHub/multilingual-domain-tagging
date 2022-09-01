@@ -21,7 +21,15 @@ global {
     multidomain_size=5997
     indomain_size=997
 
+    bpe_type=sentencepiece
+    use_labelsmooth=False
+    seed=9
+    pretrained_model=/projects/tir2/users/pfernand/models/flores101_mm100_175M
+    batch_size=5
+    is_multilingual=true
+    sampling=""
+    sampling_topp=""
+    diversity_rate=-1
+    nbest=4
 }
-
-
 

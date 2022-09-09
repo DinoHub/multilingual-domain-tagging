@@ -287,7 +287,7 @@ task TrainModel
     < bpe_model=$spm_model
     < pretrained_model=@
     > model_dir
-    :: .submitter=@ .mem=32000 .gres="gpu:3" .cpus=2
+    :: .submitter=@ .mem=44000 .gres="gpu:A6000:3" .cpus=3 .time=0
     :: src_lang=@
     :: tgt_lang=@
     :: bpe_type=@
@@ -298,11 +298,11 @@ task TrainModel
     # TODO: parameters are currently hard-coded
     # later we should try to make variable while having a default
     lr=5e-4
-    arch=transformer_iwslt_de_en
     patience=10
     max_epoch=100
     max_tokens=4096
     update_freq=1
+    arch=transformer_wmt_en_de_big
 
     fairseq-train \
         $bin_dir \
@@ -317,6 +317,7 @@ task TrainModel
         --criterion $([ "$use_labelsmooth" = true ] && echo  "label_smoothed_cross_entropy --label-smoothing 0.1" || echo "cross_entropy") \
         --dropout 0.3 --weight-decay 0.0001 \
         --max-tokens ${max_tokens} --update-freq ${update_freq} \
+        --save-interval-updates 1000 --keep-interval-updates	 3 \
         --patience $patience \
         --save-dir $model_dir \
         --seed $seed \
@@ -380,7 +381,7 @@ func GenerateTranslations
 
         cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f2 > $scores
         cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f3-  > full_predictions
-        awk "NR % 5 == 1" > $predictions
+        awk "NR % 5 == 1" full_predictions > $predictions
 }
 
 task GenerateTranslationsValid calls GenerateTranslations

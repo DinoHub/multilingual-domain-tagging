@@ -3,7 +3,7 @@ global {
     ducttape_experimental_submitters=true
     submitter="slurm"
     .exclude="tir-0-17,tir-1-13"
-    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag"
+    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag-divb0"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
     in_domain_name="indomain"
@@ -23,7 +23,7 @@ global {
     bpe_type=sentencepiece
     use_labelsmooth=False
     seed=9
-    pretrained_model=/projects/tir2/users/pfernand/models/flores101_mm100_175M
+    pretrained_model=/projects/tir2/users/pfernand/models/flores101_mm100_615M
     batch_size=5
     is_multilingual=true
     sampling=""

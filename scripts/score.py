@@ -31,7 +31,7 @@ def main():
         # gets corpus-level non-ml evaluation metrics
         # corpus-level BLEU
         tokenize = "spm"
-        print(sacrebleu.corpus_bleu(hyps, [refs]).format(), tokenize=tokenize)
+        print(sacrebleu.corpus_bleu(hyps, [refs], tokenize=tokenize).format())
         # corpus-level chrF
         print(sacrebleu.corpus_chrf(hyps, [refs]).format())
         # corpus-level TER

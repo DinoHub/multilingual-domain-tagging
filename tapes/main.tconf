@@ -3,7 +3,7 @@ global {
     ducttape_experimental_submitters=true
     submitter="slurm"
     .exclude="tir-0-17,tir-1-13"
-    ducttape_output="/projects/tir6/general/aogayo/workflows-outputs/domaintag-divb0"
+    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_newbpe"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
     in_domain_name="indomain"
@@ -18,12 +18,12 @@ global {
     ngram=4
     kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
     in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
-    multidomain_size=(MultidomainSize: 5997 10000)
+    multidomain_size=(MultidomainSize: 5997)
     indomain_size=997
     bpe_type=sentencepiece
     use_labelsmooth=False
     seed=9
-    pretrained_model=/projects/tir2/users/pfernand/models/flores101_mm100_615M
+    pretrained_model=/projects/tir2/users/pfernand/models/flores101_mm100_175M
     batch_size=5
     is_multilingual=true
     sampling=""
@@ -34,4 +34,8 @@ global {
 
 plan TaggingTarget {
     reach ScoreTranslationsTest via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
+}
+
+plan TaggingTargetValid {
+    reach ScoreTranslationsValid via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
 }

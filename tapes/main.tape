@@ -109,9 +109,8 @@ func KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    > tagged_file
+    > tags
     :: is_calc_quants
-    :: source_file
     :: tagging_lang
     {
     python $repo/scripts/kenlm_score.py $kenlm_model_indomain $input > $indomain_kenlm_scores
@@ -130,7 +129,7 @@ func KenLMScore
 
     #assign quantiles
     python $repo/scripts/quantiles.py --scores_indomain $indomain_kenlm_scores  --scores_multidomain $multidomain_kenlm_scores \
-     --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file  --source_file $tagginglm_dir/$source_file.$tagging_lang  --tagged_file $tagged_file > tags
+     --n_quantiles 4 --action assign_quantiles --quantiles_file  $quantiles_file   > $tags
     }
 
 task CalculateQuantiles calls  KenLMScore
@@ -143,8 +142,8 @@ task CalculateQuantiles calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    > tagged_file=tagginglm_test_tagged
-    :: is_calc_quants=true source_file=tagginglm_test tagging_lang=@
+    > tags
+    :: is_calc_quants=true tagging_lang=@
 
 
 task AssignQuantilesTest calls  KenLMScore
@@ -157,8 +156,8 @@ task AssignQuantilesTest calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    > tagged_file=test_tagged
-    :: is_calc_quants=false source_file=test tagging_lang=@
+    > tags
+    :: is_calc_quants=false  tagging_lang=@
 
 
 
@@ -172,8 +171,8 @@ task AssignQuantilesValid calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    > tagged_file=valid_tagged
-    :: is_calc_quants=false source_file=valid tagging_lang=@
+    > tags
+    :: is_calc_quants=false  tagging_lang=@
 
 
 
@@ -187,53 +186,65 @@ task AssignQuantilesTrain calls  KenLMScore
     > indomain_kenlm_scores
     > multidomain_kenlm_scores
     > quantiles
-    > tagged_file=train_tagged
-    :: is_calc_quants=false source_file=train tagging_lang=@
+    > tags
+    :: is_calc_quants=false  tagging_lang=@
 
 
 func ApplyBPE
     < raw_untagged
-    < raw_tagged
+    < tagginglm_dir
+    < tags
+    < repo
     < spm_model
     > spm_tagged
     > spm_untagged
-    :: repo
     :: src_lang
     :: tgt_lang
+    :: tagging_lang
+    :: raw_totag
 {
 
     python $repo/scripts/spm_encode.py --input_file $raw_untagged  --out_file spm_untagged \
     --model_name=$spm_model
-    python $repo/scripts/spm_encode.py --input_file $raw_tagged --out_file spm_tagged \
+    python $repo/scripts/spm_encode.py --input_file $tagginglm_dir/$raw_totag.$tagging_lang --out_file spm_totag \
     --model_name=$spm_model
+
+    python $repo/scripts/tag.py --file2tag spm_totag --tags $tags --tagged_file $spm_tagged
 
 }
 
 task ApplyBPETrain calls ApplyBPE
     < raw_untagged=$untagged_train@GetData
-    < raw_tagged=$tagged_file@AssignQuantilesTrain
+    < tagginglm_dir=$tagginglm_dir@GetData
+    < tags=$tags@AssignQuantilesTrain
+    < repo=@
     < spm_model=@
     > spm_tagged
     > spm_untagged
-    :: repo=@ src_lang=@ tgt_lang=@
+    :: src_lang=@ tgt_lang=@ tagging_lang=@ raw_totag=train
 
 
 task ApplyBPEValid calls ApplyBPE
     < raw_untagged=$untagged_valid@GetData
-    < raw_tagged=$tagged_file@AssignQuantilesValid
+    < tagginglm_dir=$tagginglm_dir@GetData
+    < tags=$tags@AssignQuantilesValid
+    < repo=@
     < spm_model=@
     > spm_tagged
     > spm_untagged
-    :: repo=@ src_lang=@ tgt_lang=@
+    :: src_lang=@ tgt_lang=@ tagging_lang=@ raw_totag=valid
 
 
 task ApplyBPETest calls ApplyBPE
     < raw_untagged=$untagged_test@GetData
-    < raw_tagged=$tagged_file@AssignQuantilesTest
+    < tagginglm_dir=$tagginglm_dir@GetData
+    < tags=$tags@AssignQuantilesTest
+    < repo=@
     < spm_model=@
     > spm_tagged
     > spm_untagged
-    :: repo=@ src_lang=@ tgt_lang=@
+    :: src_lang=@ tgt_lang=@ tagging_lang=@ raw_totag=test
+
 
 task BinarizeData
     < train_tagged=$spm_tagged@ApplyBPETrain
@@ -270,13 +281,15 @@ task BinarizeData
     ln -s $test_untagged test.${untagged_lang}
 
     fairseq-preprocess \
-        --source-lang $src_lang --target-lang $tgt_lang \
-        $([ "$has_train" = true ] && echo "--trainpref train" || echo "") \
-        --validpref valid --testpref test \
-        --thresholdsrc 0 --thresholdtgt 0 \
-        --srcdict $tgt_dict --tgtdict $tgt_dict \
-        --workers 8 \
-        --destdir $bin_dir
+    --source-lang $src_lang --target-lang $tgt_lang \
+    $([ "$has_train" = true ] && echo "--trainpref train" || echo "") \
+    --validpref valid --testpref test \
+    --thresholdsrc 0 --thresholdtgt 0 \
+    --srcdict $tgt_dict --tgtdict $tgt_dict \
+    --workers 8 \
+    --destdir $bin_dir
+
+
 }
 
 
@@ -287,7 +300,7 @@ task TrainModel
     < bpe_model=$spm_model
     < pretrained_model=@
     > model_dir
-    :: .submitter=@ .mem=44000 .gres="gpu:A6000:3" .cpus=3 .time=0
+    :: .submitter=@ .mem=44000 .gres="gpu:TITANX:3" .cpus=3 .time=0
     :: src_lang=@
     :: tgt_lang=@
     :: bpe_type=@
@@ -300,7 +313,7 @@ task TrainModel
     lr=5e-4
     patience=10
     max_epoch=100
-    max_tokens=4096
+    max_tokens=512
     update_freq=1
     arch=transformer_wmt_en_de_big
 
@@ -308,6 +321,7 @@ task TrainModel
         $bin_dir \
         --task translation_multi_simple_epoch  \
         --finetune-from-model $pretrained_model \
+        --lang-pairs $pretrained_model/language_pairs.txt \
         --max-epoch $max_epoch \
         --log-interval 10 \
         --lang-pairs "en-luo" \
@@ -317,11 +331,10 @@ task TrainModel
         --criterion $([ "$use_labelsmooth" = true ] && echo  "label_smoothed_cross_entropy --label-smoothing 0.1" || echo "cross_entropy") \
         --dropout 0.3 --weight-decay 0.0001 \
         --max-tokens ${max_tokens} --update-freq ${update_freq} \
-        --save-interval-updates 1000 --keep-interval-updates	 3 \
+        --save-interval-updates 1000 --keep-interval-updates	 2 \
         --patience $patience \
         --save-dir $model_dir \
-        --seed $seed \
-        --wandb-project luo_m2m
+        --seed $seed
 
     # copy necessary files for a complete checkpoint
     if [ "$bpe_type" = "sentencepiece" ]; then
@@ -335,6 +348,8 @@ task TrainModel
     cp $src_dict  $model_dir/dict.${src_lang}.txt
     cp $tgt_dict  $model_dir/dict.${tgt_lang}.txt
     mv $model_dir/checkpoint_best.pt $model_dir/model.pt
+    cp $pretrained_model/language_pairs.txt  $model_dir/
+
 }
 
 func GenerateTranslations
@@ -358,13 +373,12 @@ func GenerateTranslations
     if [ "$is_multilingual" = true ]; then
         multilingual_args+="--task translation_multi_simple_epoch "
         multilingual_args+="--decoder-langtok --encoder-langtok src "
-        multilingual_args+="--lang-pairs $pretrained_model/language_pairs.txt "
-        multilingual_args+="--fixed-dictionary $pretrained_model/dict.txt "
+        multilingual_args+="--lang-pairs $model_dir/language_pairs.txt "
+        multilingual_args+="--fixed-dictionary $model_dir/dict.${src_lang}.txt "
     fi
 
     fairseq-generate \
         $bin_dir \
-        --fp16 \
         -s $src_lang -t $tgt_lang \
         --gen-subset $split \
         --batch-size $batch_size \
@@ -393,7 +407,7 @@ task GenerateTranslationsValid calls GenerateTranslations
         )
     > scores
     > predictions
-    :: .submitter=@ .gres="gpu:1" .cpus=5 .mem=32000M .time=0
+    :: .submitter=@ .gres="gpu:1" .cpus=3 .mem=32000M .time=0
     :: split=valid
     :: repo=@
     :: src_lang=@
@@ -416,7 +430,7 @@ task GenerateTranslationsTest calls GenerateTranslations
         )
     > scores
     > predictions
-    :: .submitter=@ .gres="gpu:1" .cpus=5 .mem=32000M .time=0
+    :: .submitter=@ .gres="gpu:1" .cpus=3 .mem=32000M .time=0
     :: split=test
     :: repo=@
     :: src_lang=@
@@ -438,10 +452,10 @@ task ScoreTranslationsTest
     :: src_lang=@
     :: tgt_lang=@
  {
-     test_src=@data_dir/test.{@src_lang}
-     test_tgt=@data_dir/test.{@tgt_lang}
+     test_src=$data_dir/test.$src_lang
+     test_tgt=$data_dir/test.$tgt_lang
     python $repo/scripts/score.py \
-        $predictions $test_tgt --src $test_src > $score
+        $predictions $test_tgt --src $test_src > $test_score
 
  }
 
@@ -455,21 +469,24 @@ task ScoreTranslationsValid
     :: tgt_lang=@
 
 {
-    valid_src=@data_dir/valid.{@src_lang}
-    valid_tgt=@data_dir/valid.{@tgt_lang}
+    valid_src=$ata_dir/valid.$src_lang
+    valid_tgt=$data_dir/valid.$tgt_lang
     python $repo/scripts/score.py \
         $valid_predictions $valid_tgt --src $valid_src > $valid_score
 }
 
 summary TranslationQualityTest {
-  of ScoreTranslationsTest >  bleu comet chrf ter bleurt {
-    cat $test_score | grep -oP "COMET = \K[-0-9.]+" > $comet
+  of ScoreTranslationsTest >  bleu chrf ter  {
     cat $test_score | grep -oP "BLEU = \K[-0-9.]+" > $bleu
     cat $test_score | grep -oP "chrF2 = \K[-0-9.]+" > $chrf
     cat $test_score | grep -oP "TER = \K[-0-9.]+" > $ter
-    cat $test_score | grep -oP "BLEURT = \K[-0-9.]+" > $bleurt || true
-    if [ ! -s $bleurt ]; then
-        echo "---" > $bleurt
-    fi
+   }
+}
+
+summary TranslationQualityValid {
+  of ScoreTranslationsValid >  bleu chrf ter  {
+    cat $valid_score | grep -oP "BLEU = \K[-0-9.]+" > $bleu
+    cat $valid_score | grep -oP "chrF2 = \K[-0-9.]+" > $chrf
+    cat $valid_score | grep -oP "TER = \K[-0-9.]+" > $ter
    }
 }

@@ -18,16 +18,6 @@ def get_quantiles(scores, n_quantiles, quantiles_file):
 
 
 def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_file=None):
-    if source_file and tagged_file:
-        '''
-        You get the source file with - goal is to add the tag at the beginning
-        Example : 
-        input: This is the first line
-        output: <1st> This is the first line
-        '''
-        source_lines = open(source_file, "r").readlines()
-        assert len(source_lines) == len(scores)
-        tagged_out = open(tagged_file, "w")
     quants = []
     for i in range(len(scores)):
         for j in range(len(quant_list)):
@@ -41,8 +31,19 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
 
             # Printing out
         print(quants[i])
-        if tagged_out:
+    if source_file and tagged_file:
+        '''
+            You get the source file with - goal is to add the tag at the beginning
+            Example : 
+            input: This is the first line
+            output: <1st> This is the first line
+        '''
+        source_lines = open(source_file, "r").readlines()
+        assert len(source_lines) == len(scores)
+        tagged_out = open(tagged_file, "w"):
+        for i in range(len(quants)):
             tagged_out.write(quants[i] + " " + source_lines[i])
+
 
 
 def main():

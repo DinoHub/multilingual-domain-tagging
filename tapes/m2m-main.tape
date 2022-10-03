@@ -395,7 +395,7 @@ func GenerateTranslations
 
         cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f2 > $scores
         cat full_outputs | grep ^H | cut -c 3- | sort -n | cut -f3-  > full_predictions
-        awk "NR % 5 == 1" full_predictions > $predictions
+        awk "NR % $nbest == 1" full_predictions > $predictions
         sed  -i 's/<.th>//g' $predictions  #removing the tags that might have been generated
         sed  -i 's/\s//' $predictions #removing the space after tags
 }

@@ -2,10 +2,15 @@ import numpy as np
 import argparse
 
 
+
 def get_scores(scores_indomain, scores_multidomain):
     scores = []
     for i in range(len(scores_indomain)):
         scores.append(scores_indomain[i] - scores_multidomain[i])  # difference between the length normalized scores
+    f = open("scores", "w")
+    for score in scores:
+        f.write(str(score)+"\n")
+    f.close()
     return scores
 
 
@@ -27,8 +32,8 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
                 else:
                     quants.append(quant_dict[quant_list[j-1]])
                 break
-            quants.append(quant_dict[quant_list[j - 1]])
-
+        if scores[i] > quant_list[-1] and len(quants) != i+1:
+            quants.append(quant_dict[quant_list[j]])
             # Printing out
         print(quants[i])
     if source_file and tagged_file:
@@ -40,7 +45,7 @@ def assign_quantiles(scores, quant_dict, quant_list, source_file=None, tagged_fi
         '''
         source_lines = open(source_file, "r").readlines()
         assert len(source_lines) == len(scores)
-        tagged_out = open(tagged_file, "w"):
+        tagged_out = open(tagged_file, "w")
         for i in range(len(quants)):
             tagged_out.write(quants[i] + " " + source_lines[i])
 

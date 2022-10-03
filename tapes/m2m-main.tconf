@@ -3,7 +3,7 @@ global {
     ducttape_experimental_submitters=true
     submitter="slurm"
     .exclude="tir-0-17,tir-1-13"
-    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_deltalm"
+    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_newbpem2m"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/all_data
     in_domain_name="indomain"

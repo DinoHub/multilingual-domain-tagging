@@ -36,6 +36,10 @@ plan TaggingTarget {
     reach ScoreTranslationsTest via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
 }
 
+plan TaggingTargetEn {
+    reach ScoreTranslationsTest via (UsePretrained: false) * (TaggingLang: en) * (MultidomainSize: *)
+}
+
 plan TaggingTargetValid {
     reach ScoreTranslationsValid via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
 }

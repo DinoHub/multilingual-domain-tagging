@@ -27,11 +27,6 @@ task GetData
     ln -s $data_dir/train.${untagged_lang} $untagged_train
     ln -s $data_dir/test.${untagged_lang} $untagged_test
     ln -s $data_dir/valid.${untagged_lang} $untagged_valid
-
-
-
-
-
  }
 
 task PreprocessTaggingLMData
@@ -300,7 +295,7 @@ task TrainModel
     < bpe_model=$spm_model
     < pretrained_model=@
     > model_dir
-    :: .submitter=@ .mem=44000 .gres="gpu:A6000:3" .cpus=3 .time=0
+    :: .submitter=@ .mem=20G .gres="gpu:1" .cpus=3 .time=0
     :: src_lang=@
     :: tgt_lang=@
     :: bpe_type=@

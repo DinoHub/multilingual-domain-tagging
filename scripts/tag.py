@@ -7,7 +7,7 @@ def tag(file2tag_name, tags_name, tagged_file_name):
 
     assert len(tags) == len(lines2tag), "Files should be the same size"
     for i in range(len(tags)):
-        tagged_file.write(tags[i] + " " + lines2tag[i])
+        tagged_file.write("▁" + tags[i] + " " + lines2tag[i])
 
 def main():
     parser = argparse.ArgumentParser()

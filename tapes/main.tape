@@ -7,7 +7,7 @@ task GetData
     :: tagging_lang=@ src_lang=@ tgt_lang=@
 
  {
-    if [ $tagging_lang = $src_lang ]; then
+     if [ $tagging_lang = $src_lang ]; then
        untagged_lang=$tgt_lang
     elif [ $tagging_lang = $tgt_lang ]; then
        untagged_lang=$src_lang
@@ -130,7 +130,7 @@ func KenLMScore
 task CalculateQuantiles calls  KenLMScore
     < kenlm_model_indomain=$model@BuildKenLMInDomain
     < kenlm_model_multidomain=$model@BuildKenLMMultiDomain
-    < input=$tagginglm_test_preprocessed@PreprocessTaggingLMData
+    < input=$train_preprocessed@PreprocessTaggingLMData
     < repo=@
     < tagginglm_dir=$tagginglm_dir@GetData
     < in_quantiles=@
@@ -199,10 +199,19 @@ func ApplyBPE
     :: raw_totag
 {
 
-    python $repo/scripts/spm_encode.py --input_file $raw_untagged  --out_file spm_untagged \
+    #switch things to tagging in the encoder while keeping the previous code for steps above
+    if [ $tagging_lang = $tgt_lang ]; then
+       python $repo/scripts/spm_encode.py --input_file $raw_untagged   --out_file spm_totag  \
     --model_name=$spm_model
-    python $repo/scripts/spm_encode.py --input_file $tagginglm_dir/$raw_totag.$tagging_lang --out_file spm_totag \
+        python $repo/scripts/spm_encode.py --input_file $tagginglm_dir/$raw_totag.$tagging_lang  --out_file spm_untagged \
     --model_name=$spm_model
+    else
+       python $repo/scripts/spm_encode.py --input_file $raw_untagged  --out_file spm_untagged \
+    --model_name=$spm_model
+        python $repo/scripts/spm_encode.py --input_file $tagginglm_dir/$raw_totag.$tagging_lang --out_file spm_totag \
+    --model_name=$spm_model
+    fi
+
 
     python $repo/scripts/tag.py --file2tag spm_totag --tags $tags --tagged_file $spm_tagged
 

@@ -1,0 +1,23 @@
+#!/bin/sh
+python train.py exp/burmese/binary_data \
+    --save-dir exp/burmese \
+    --arch deltalm_base \
+    --pretrained-deltalm-checkpoint checkpoints/deltalm-base.pt \
+    --share-all-embeddings \
+    --max-source-positions 512 --max-target-positions 512 \
+    --criterion label_smoothed_cross_entropy \
+    --label-smoothing 0.1 \
+    --optimizer adam --adam-betas '(0.9, 0.98)' \
+    --lr-scheduler inverse_sqrt \
+    --lr 0.00001 \
+    --warmup-init-lr 1e-07 \
+    --stop-min-lr 1e-09 \
+    --warmup-updates 4000 \
+    --max-update 400000 \
+    --max-epoch 80 \
+    --max-tokens 512 \
+    --update-freq 1 \
+    --seed 1 \
+    --wandb-project delta-burmese \
+    --log-format simple \
+    --skip-invalid-size-inputs-valid-test

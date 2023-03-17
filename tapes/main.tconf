@@ -1,9 +1,9 @@
 global {
-    ducttape_experimental_imports=true
     ducttape_experimental_submitters=true
+    ducttape_experimental_imports=true
     submitter="slurm"
     .exclude="tir-0-17,tir-1-13"
-    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_deltalm"
+    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_deltalm-my_newtag"
     repo=/projects/tir6/general/aogayo/models/domaintag
     data_dir=/projects/tir6/general/aogayo/models/domaintag/burmese_data/all_data/
     in_domain_name="indomain"
@@ -24,6 +24,7 @@ global {
     use_labelsmooth=False
     seed=9
     pretrained_model=/projects/tir6/general/aogayo/models/unilm/deltalm/checkpoints/deltalm-base.pt
+    use_pretrained=(UsePretrained: true false)
     batch_size=5
     is_multilingual=true
     sampling=""

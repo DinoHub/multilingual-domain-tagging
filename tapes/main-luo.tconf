@@ -1,0 +1,41 @@
+global {
+    ducttape_experimental_imports=true
+    ducttape_experimental_submitters=true
+    submitter="slurm"
+    .exclude="tir-0-17,tir-1-13, tir-0-19,tir-0-32"
+    ducttape_output="/projects/tir5/users/aogayo/workflows/domaintag_deltalm_luo"
+    repo=/projects/tir6/general/aogayo/models/domaintag
+    data_dir=/projects/tir6/general/aogayo/models/domaintag/luo_data
+    in_domain_name="indomain"
+    multi_domain_name="multidomain"
+    tagging_test_name="tagginglm_test"
+    tagging_lang=(TaggingLang: luo en)
+    src_lang=en
+    tgt_lang=luo
+    spm_model=/projects/tir6/general/aogayo/models/unilm/deltalm/mod_spm/spm.model
+    src_dict=/projects/tir6/general/aogayo/models/unilm/deltalm/mod_spm/dict.txt
+    tgt_dict=/projects/tir6/general/aogayo/models/unilm/deltalm/mod_spm/dict.txt
+    ngram=4
+    kenlm_dir=/projects/tir6/general/aogayo/models/intelsel/kenlm
+    in_quantiles=/projects/tir6/general/aogayo/models/domaintag/in_quantiles
+    multidomain_size=(MultidomainSize: 5997)
+    indomain_size=997
+    bpe_type=sentencepiece
+    use_labelsmooth=False
+    seed=9
+    pretrained_model=/projects/tir6/general/aogayo/models/unilm/deltalm/checkpoints/deltalm-base.pt
+    batch_size=5
+    is_multilingual=true
+    sampling=""
+    sampling_topp=""
+    diversity_rate=-1
+    nbest=4
+}
+
+plan TaggingTarget {
+    reach ScoreTranslationsTest via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
+}
+
+plan TaggingTargetValid {
+    reach ScoreTranslationsValid via (UsePretrained: false) * (TaggingLang: *) * (MultidomainSize: *)
+}
